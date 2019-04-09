@@ -9,8 +9,9 @@ const OUTPUT_START_ROW = 5;
 const OUTPUT_START_COL = 15;
 
 function getGroup(num) {
-    for (const [group, values] of Object.entries(config.mapping)) {
-        if (values.includes(num)) {
+    for (const group in config.mapping) {
+        const values = config.mapping[group];
+        if (values.indexOf(num) > -1) {
             return group;
         }
     }
@@ -21,7 +22,9 @@ function getGroup(num) {
 function calcTotals(rows) {
     const totals = {};
     for (const row of rows) {
-        const [num, title, total] = row;
+        const num = row[0];
+        const title = row[1];
+        const total = row[2];
         const group = getGroup(num);
         // console.log(`group=${group} num=${num} title=${title} total=${total}`);
         if (group) {
@@ -64,23 +67,26 @@ function printData(sheet, totals, startRow, startCol) {
     });
 }
 
-(async function main() {
+(function main() {
     const workbook = new Excel.Workbook();
-    await workbook.xlsx.readFile(INPUT_FILE);
-    const sheet = workbook.getWorksheet(1);
-    const rows = [];
-    sheet.eachRow((row, rowNumber) => {
-        if (rowNumber < INPUT_START_ROW) {
-            return;
-        }
-        const [, , key, title, , , , , , , total] = row.values;
-        if (key && /^\d+$/.test(key.trim())) {
-            rows.push([key, title, total]);
-        }
-    });
-    const totals = calcTotals(rows);
+    workbook.xlsx.readFile(INPUT_FILE).then(workbook => {
+        const sheet = workbook.getWorksheet(1);
+        const rows = [];
+        sheet.eachRow((row, rowNumber) => {
+            if (rowNumber < INPUT_START_ROW) {
+                return;
+            }
+            const key = row.values[2];
+            const title = row.values[3];
+            const total = row.values[10];
+            if (key && /^\d+$/.test(key.trim())) {
+                rows.push([key, title, total]);
+            }
+        });
+        const totals = calcTotals(rows);
 
-    printData(sheet, totals, OUTPUT_START_ROW, OUTPUT_START_COL);
-    await workbook.xlsx.writeFile(OUTPUT_FILE);
+        printData(sheet, totals, OUTPUT_START_ROW, OUTPUT_START_COL);
+        workbook.xlsx.writeFile(OUTPUT_FILE).then(() => console.log('Done.'));
+    });
 })();
 
