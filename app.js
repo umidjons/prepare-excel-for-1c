@@ -1,3 +1,5 @@
+'use strict';
+
 const Excel = require('exceljs');
 const config = require('./config');
 
@@ -21,11 +23,11 @@ function getGroup(num) {
 
 function calcTotals(rows) {
     const totals = {};
-    for (const row of rows) {
-        const num = row[0];
-        const title = row[1];
-        const total = row[2];
-        const group = getGroup(num);
+    for (let row of rows) {
+        let num = row[0];
+        let title = row[1];
+        let total = row[2];
+        let group = getGroup(num);
         // console.log(`group=${group} num=${num} title=${title} total=${total}`);
         if (group) {
             if (!totals[group]) {
@@ -59,7 +61,10 @@ function printData(sheet, totals, startRow, startCol) {
         cell.value = value;
     }
 
-    const rows = Object.values(totals);
+    const rows = [];
+    for (const key in totals) {
+        rows.push(totals[key]);
+    }
     rows.forEach((row, index) => {
         set(startRow + index, startCol, row.group, 8);
         set(startRow + index, startCol + 1, row.title, 40);
@@ -67,26 +72,32 @@ function printData(sheet, totals, startRow, startCol) {
     });
 }
 
-(function main() {
+function main() {
     const workbook = new Excel.Workbook();
-    workbook.xlsx.readFile(INPUT_FILE).then(workbook => {
-        const sheet = workbook.getWorksheet(1);
-        const rows = [];
-        sheet.eachRow((row, rowNumber) => {
-            if (rowNumber < INPUT_START_ROW) {
-                return;
-            }
-            const key = row.values[2];
-            const title = row.values[3];
-            const total = row.values[10];
-            if (key && /^\d+$/.test(key.trim())) {
-                rows.push([key, title, total]);
-            }
-        });
-        const totals = calcTotals(rows);
+    workbook.xlsx.readFile(INPUT_FILE)
+        .then(workbook => {
+            const sheet = workbook.getWorksheet(1);
+            const rows = [];
+            sheet.eachRow((row, rowNumber) => {
+                if (rowNumber < INPUT_START_ROW) {
+                    return;
+                }
+                const key = row.values[2];
+                const title = row.values[3];
+                const total = row.values[10];
+                if (key && /^\d+$/.test(key.trim())) {
+                    rows.push([key, title, total]);
+                }
+            });
+            const totals = calcTotals(rows);
 
-        printData(sheet, totals, OUTPUT_START_ROW, OUTPUT_START_COL);
-        workbook.xlsx.writeFile(OUTPUT_FILE).then(() => console.log('Done.'));
-    });
-})();
+            printData(sheet, totals, OUTPUT_START_ROW, OUTPUT_START_COL);
+            workbook.xlsx.writeFile(OUTPUT_FILE)
+                .then(() => console.log('Done.'))
+                .catch(err => console.log(err));
+        })
+        .catch(err => console.log(err));
+}
+
+main();
 
