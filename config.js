@@ -1,5 +1,4 @@
 module.exports = {
-    stopWord: 'Итого',
     mapping: {
         '2': ['1'],
         '2001': ['11'],
